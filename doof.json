@@ -1,0 +1,11 @@
+{
+  "name": "std/json",
+  "version": "0.1.0",
+  "license": "ISC",
+  "build": {
+    "native": {
+      "extraCopyPaths": ["./native_json.hpp"]
+    }
+  },
+  "dependencies": {}
+}
