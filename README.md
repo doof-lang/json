@@ -41,7 +41,7 @@ Serialize a `JsonValue` to compact JSON.
 - Emits no extra whitespace.
 - Escapes JSON control characters in strings.
 - Array element order is preserved.
-- Object member order should be treated as unspecified.
+- Object member order follows insertion order.
 
 ```doof
 payload: JsonValue := ["line\nbreak", { only: "value" }]

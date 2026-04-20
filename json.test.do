@@ -67,6 +67,10 @@ export function testParseNumbersAcrossIntegerRanges(): void {
 export function testParseArraysAndObjectsRoundTrip(): void {
   assert(formatJsonValue(requireParsed("[]")) == "[]", "expected empty arrays to round-trip")
   assert(formatJsonValue(requireParsed("{}")) == "{}", "expected empty objects to round-trip")
+  assert(
+    formatJsonValue(requireParsed("{\"second\":2,\"first\":1,\"third\":3}")) == "{\"second\":2,\"first\":1,\"third\":3}",
+    "expected object key insertion order to round-trip"
+  )
 
   parsed := requireParsed("[null,true,1,\"ok\",{\"only\":2},[]]")
   assert(
