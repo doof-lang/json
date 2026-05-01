@@ -1,15 +1,15 @@
-import { formatJsonValue, parseJsonValue } from "./index"
+import { formatJsonValue, parseJsonValue, parseJsonObject } from "./index"
 
 function requireParsed(text: string): JsonValue {
   let value: JsonValue = null
   let found = false
 
   case parseJsonValue(text) {
-    s: Success => {
+    s: Success -> {
       value = s.value
       found = true
     }
-    f: Failure => {
+    f: Failure -> {
       assert(false, "expected JSON parse success: ${f.error}")
     }
   }
@@ -23,10 +23,10 @@ function requireParseFailure(text: string): string {
   let found = false
 
   case parseJsonValue(text) {
-    s: Success => {
+    s: Success -> {
       assert(false, "expected JSON parse failure")
     }
-    f: Failure => {
+    f: Failure -> {
       message = f.error
       found = true
     }
@@ -129,4 +129,17 @@ export function testParseRejectsBrokenUnicodeEscapes(): void {
 export function testParseRejectsTrailingCharacters(): void {
   message := requireParseFailure("true false")
   assert(message.contains("Unexpected trailing characters"), "expected trailing character diagnostics")
+}
+
+export function testParseJsonObject() : void {
+  obj := parseJsonObject("{\"key\": \"value\"}")
+  assert(obj.isSuccess(), "expected valid JSON object to parse successfully")
+}
+
+export function testFailParseJsonObject() : void {
+  obj := parseJsonObject("5")
+  case obj {
+    s: Success -> assert(false, "expected non-object JSON to fail parsing as object")
+    f: Failure -> assert(f.error == "Parsed value is not a JSON object", "expected failure message about non-object value")
+  }
 }

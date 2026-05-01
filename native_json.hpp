@@ -248,7 +248,7 @@ struct Parser {
     doof::Result<doof::JsonValue, std::string> parse_object() {
         ++index;
         skip_whitespace();
-            doof::JsonValue::Object result = std::make_shared<doof::JsonValue::Object::element_type>();
+        doof::JsonObject result = std::make_shared<doof::JsonObject::element_type>();
         if (peek() == '}') {
             ++index;
             return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(std::move(result)));
