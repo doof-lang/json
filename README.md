@@ -2,6 +2,11 @@
 
 JSON parsing and formatting for `JsonValue`. Parsing returns a `Result<JsonValue, string>` with readable error messages that include line and column information.
 
+## Documentation
+
+- [Guide and API reference](docs/API.md) explains parsing, object-only parsing, formatting, numeric mapping, and errors.
+- Tests can be run with `doof test json`.
+
 ## Usage
 
 ```doof
