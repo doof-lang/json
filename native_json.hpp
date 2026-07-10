@@ -72,19 +72,19 @@ struct Parser {
     doof::Result<doof::JsonValue, std::string> parse_document() {
         skip_whitespace();
         auto value = parse_value();
-        if (value.isFailure()) {
+        if (is_failure(value)) {
             return value;
         }
         skip_whitespace();
         if (!at_end()) {
-            return doof::Result<doof::JsonValue, std::string>::failure(error("Unexpected trailing characters"));
+            return doof::Failure<std::string>{error("Unexpected trailing characters")};
         }
         return value;
     }
 
     doof::Result<doof::JsonValue, std::string> parse_value() {
         if (at_end()) {
-            return doof::Result<doof::JsonValue, std::string>::failure(error("Unexpected end of JSON input"));
+            return doof::Failure<std::string>{error("Unexpected end of JSON input")};
         }
         switch (peek()) {
             case 'n': return parse_null();
@@ -92,10 +92,10 @@ struct Parser {
             case 'f': return parse_false();
             case '"': {
                 auto parsed = parse_string();
-                if (parsed.isFailure()) {
-                    return doof::Result<doof::JsonValue, std::string>::failure(parsed.error());
+                if (is_failure(parsed)) {
+                    return doof::Failure<std::string>{failure_error(parsed)};
                 }
-                return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(std::move(parsed.value())));
+                return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(success_value(parsed)))};
             }
             case '[': return parse_array();
             case '{': return parse_object();
@@ -103,48 +103,48 @@ struct Parser {
                 if (peek() == '-' || is_digit(peek())) {
                     return parse_number();
                 }
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Unexpected character in JSON input"));
+                return doof::Failure<std::string>{error("Unexpected character in JSON input")};
         }
     }
 
     doof::Result<doof::JsonValue, std::string> parse_null() {
         if (text.compare(index, 4, "null") != 0) {
-            return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid token"));
+            return doof::Failure<std::string>{error("Invalid token")};
         }
         index += 4;
-        return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(nullptr));
+        return doof::Success<doof::JsonValue>{doof::JsonValue(nullptr)};
     }
 
     doof::Result<doof::JsonValue, std::string> parse_true() {
         if (text.compare(index, 4, "true") != 0) {
-            return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid token"));
+            return doof::Failure<std::string>{error("Invalid token")};
         }
         index += 4;
-        return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(true));
+        return doof::Success<doof::JsonValue>{doof::JsonValue(true)};
     }
 
     doof::Result<doof::JsonValue, std::string> parse_false() {
         if (text.compare(index, 5, "false") != 0) {
-            return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid token"));
+            return doof::Failure<std::string>{error("Invalid token")};
         }
         index += 5;
-        return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(false));
+        return doof::Success<doof::JsonValue>{doof::JsonValue(false)};
     }
 
     doof::Result<std::string, std::string> parse_string() {
         if (peek() != '"') {
-            return doof::Result<std::string, std::string>::failure(error("Expected JSON string"));
+            return doof::Failure<std::string>{error("Expected JSON string")};
         }
         ++index;
         std::string out;
         while (!at_end()) {
             const unsigned char ch = static_cast<unsigned char>(text[index++]);
             if (ch == '"') {
-                return doof::Result<std::string, std::string>::success(std::move(out));
+                return doof::Success<std::string>{std::move(out)};
             }
             if (ch == '\\') {
                 if (at_end()) {
-                    return doof::Result<std::string, std::string>::failure(error("Unterminated escape sequence"));
+                    return doof::Failure<std::string>{error("Unterminated escape sequence")};
                 }
                 const char escape = text[index++];
                 switch (escape) {
@@ -158,63 +158,63 @@ struct Parser {
                     case 't': out.push_back('\t'); break;
                     case 'u': {
                         auto codepoint = parse_unicode_escape();
-                        if (codepoint.isFailure()) {
-                            return doof::Result<std::string, std::string>::failure(codepoint.error());
+                        if (is_failure(codepoint)) {
+                            return doof::Failure<std::string>{failure_error(codepoint)};
                         }
-                        append_codepoint_utf8(out, codepoint.value());
+                        append_codepoint_utf8(out, success_value(codepoint));
                         break;
                     }
                     default:
-                        return doof::Result<std::string, std::string>::failure(error("Invalid escape sequence"));
+                        return doof::Failure<std::string>{error("Invalid escape sequence")};
                 }
                 continue;
             }
             if (ch < 0x20) {
-                return doof::Result<std::string, std::string>::failure(error("Unescaped control character in string"));
+                return doof::Failure<std::string>{error("Unescaped control character in string")};
             }
             out.push_back(static_cast<char>(ch));
         }
-        return doof::Result<std::string, std::string>::failure(error("Unterminated string literal"));
+        return doof::Failure<std::string>{error("Unterminated string literal")};
     }
 
     doof::Result<uint32_t, std::string> parse_unicode_escape() {
         uint32_t codepoint = 0;
         for (int i = 0; i < 4; ++i) {
             if (at_end()) {
-                return doof::Result<uint32_t, std::string>::failure(error("Incomplete unicode escape"));
+                return doof::Failure<std::string>{error("Incomplete unicode escape")};
             }
             const int value = hex_value(text[index++]);
             if (value < 0) {
-                return doof::Result<uint32_t, std::string>::failure(error("Invalid unicode escape"));
+                return doof::Failure<std::string>{error("Invalid unicode escape")};
             }
             codepoint = (codepoint << 4) | static_cast<uint32_t>(value);
         }
 
         if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
             if (index + 1 >= text.size() || text[index] != '\\' || text[index + 1] != 'u') {
-                return doof::Result<uint32_t, std::string>::failure(error("Expected unicode low surrogate"));
+                return doof::Failure<std::string>{error("Expected unicode low surrogate")};
             }
             index += 2;
             uint32_t low = 0;
             for (int i = 0; i < 4; ++i) {
                 if (at_end()) {
-                    return doof::Result<uint32_t, std::string>::failure(error("Incomplete unicode escape"));
+                    return doof::Failure<std::string>{error("Incomplete unicode escape")};
                 }
                 const int value = hex_value(text[index++]);
                 if (value < 0) {
-                    return doof::Result<uint32_t, std::string>::failure(error("Invalid unicode escape"));
+                    return doof::Failure<std::string>{error("Invalid unicode escape")};
                 }
                 low = (low << 4) | static_cast<uint32_t>(value);
             }
             if (low < 0xDC00 || low > 0xDFFF) {
-                return doof::Result<uint32_t, std::string>::failure(error("Invalid unicode low surrogate"));
+                return doof::Failure<std::string>{error("Invalid unicode low surrogate")};
             }
             codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
         } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
-            return doof::Result<uint32_t, std::string>::failure(error("Unexpected unicode low surrogate"));
+            return doof::Failure<std::string>{error("Unexpected unicode low surrogate")};
         }
 
-        return doof::Result<uint32_t, std::string>::success(codepoint);
+        return doof::Success<uint32_t>{codepoint};
     }
 
     doof::Result<doof::JsonValue, std::string> parse_array() {
@@ -223,26 +223,26 @@ struct Parser {
         auto result = std::make_shared<std::vector<doof::JsonValue>>();
         if (peek() == ']') {
             ++index;
-            return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(std::move(result)));
+            return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
         }
         while (true) {
             auto item = parse_value();
-            if (item.isFailure()) {
+            if (is_failure(item)) {
                 return item;
             }
-            result->push_back(std::move(item.value()));
+            result->push_back(std::move(success_value(item)));
             skip_whitespace();
             if (peek() == ']') {
                 ++index;
                 break;
             }
             if (peek() != ',') {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Expected ',' or ']'"));
+                return doof::Failure<std::string>{error("Expected ',' or ']'")};
             }
             ++index;
             skip_whitespace();
         }
-        return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(std::move(result)));
+        return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
     }
 
     doof::Result<doof::JsonValue, std::string> parse_object() {
@@ -251,36 +251,36 @@ struct Parser {
         doof::JsonObject result = std::make_shared<doof::JsonObject::element_type>();
         if (peek() == '}') {
             ++index;
-            return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(std::move(result)));
+            return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
         }
         while (true) {
             auto key = parse_string();
-            if (key.isFailure()) {
-                return doof::Result<doof::JsonValue, std::string>::failure(key.error());
+            if (is_failure(key)) {
+                return doof::Failure<std::string>{failure_error(key)};
             }
             skip_whitespace();
             if (peek() != ':') {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Expected ':' after object key"));
+                return doof::Failure<std::string>{error("Expected ':' after object key")};
             }
             ++index;
             skip_whitespace();
             auto value = parse_value();
-            if (value.isFailure()) {
+            if (is_failure(value)) {
                 return value;
             }
-            (*result)[std::move(key.value())] = std::move(value.value());
+            (*result)[std::move(success_value(key))] = std::move(success_value(value));
             skip_whitespace();
             if (peek() == '}') {
                 ++index;
                 break;
             }
             if (peek() != ',') {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Expected ',' or '}'"));
+                return doof::Failure<std::string>{error("Expected ',' or '}'")};
             }
             ++index;
             skip_whitespace();
         }
-        return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(std::move(result)));
+        return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
     }
 
     doof::Result<doof::JsonValue, std::string> parse_number() {
@@ -288,18 +288,18 @@ struct Parser {
         if (peek() == '-') {
             ++index;
             if (at_end()) {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid JSON number"));
+                return doof::Failure<std::string>{error("Invalid JSON number")};
             }
         }
 
         if (peek() == '0') {
             ++index;
             if (!at_end() && is_digit(peek())) {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Leading zeros are not allowed in JSON numbers"));
+                return doof::Failure<std::string>{error("Leading zeros are not allowed in JSON numbers")};
             }
         } else {
             if (!is_digit(peek())) {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid JSON number"));
+                return doof::Failure<std::string>{error("Invalid JSON number")};
             }
             while (!at_end() && is_digit(peek())) {
                 ++index;
@@ -311,7 +311,7 @@ struct Parser {
             is_float = true;
             ++index;
             if (at_end() || !is_digit(peek())) {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid JSON number"));
+                return doof::Failure<std::string>{error("Invalid JSON number")};
             }
             while (!at_end() && is_digit(peek())) {
                 ++index;
@@ -325,7 +325,7 @@ struct Parser {
                 ++index;
             }
             if (at_end() || !is_digit(peek())) {
-                return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid JSON number exponent"));
+                return doof::Failure<std::string>{error("Invalid JSON number exponent")};
             }
             while (!at_end() && is_digit(peek())) {
                 ++index;
@@ -344,12 +344,12 @@ struct Parser {
         char* end = nullptr;
         const double value = std::strtod(token.c_str(), &end);
         if (end == token.c_str() || (end != nullptr && *end != 0)) {
-            return doof::Result<doof::JsonValue, std::string>::failure(error("Invalid JSON number"));
+            return doof::Failure<std::string>{error("Invalid JSON number")};
         }
         if (errno == ERANGE || !std::isfinite(value)) {
-            return doof::Result<doof::JsonValue, std::string>::failure(error("JSON number out of range"));
+            return doof::Failure<std::string>{error("JSON number out of range")};
         }
-        return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(value));
+        return doof::Success<doof::JsonValue>{doof::JsonValue(value)};
     }
 
     doof::Result<doof::JsonValue, std::string> parse_integer_number(const std::string& token) {
@@ -359,9 +359,9 @@ struct Parser {
             const long long value = std::strtoll(token.c_str(), &end, 10);
             if (end != nullptr && *end == 0 && errno != ERANGE) {
                 if (value >= std::numeric_limits<int32_t>::min() && value <= std::numeric_limits<int32_t>::max()) {
-                    return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(static_cast<int32_t>(value)));
+                    return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int32_t>(value))};
                 }
-                return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(static_cast<int64_t>(value)));
+                return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int64_t>(value))};
             }
         } else {
             errno = 0;
@@ -369,10 +369,10 @@ struct Parser {
             const unsigned long long value = std::strtoull(token.c_str(), &end, 10);
             if (end != nullptr && *end == 0 && errno != ERANGE) {
                 if (value <= static_cast<unsigned long long>(std::numeric_limits<int32_t>::max())) {
-                    return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(static_cast<int32_t>(value)));
+                    return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int32_t>(value))};
                 }
                 if (value <= static_cast<unsigned long long>(std::numeric_limits<int64_t>::max())) {
-                    return doof::Result<doof::JsonValue, std::string>::success(doof::JsonValue(static_cast<int64_t>(value)));
+                    return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int64_t>(value))};
                 }
             }
         }
