@@ -380,12 +380,95 @@ struct Parser {
     }
 };
 
+inline void append_escaped_string(std::string& out, const std::string& value) {
+    static constexpr char HEX[] = "0123456789abcdef";
+    out.push_back('"');
+    for (unsigned char ch : value) {
+        switch (ch) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (ch < 0x20) {
+                    out += "\\u00";
+                    out.push_back(HEX[(ch >> 4) & 0x0F]);
+                    out.push_back(HEX[ch & 0x0F]);
+                } else {
+                    out.push_back(static_cast<char>(ch));
+                }
+                break;
+        }
+    }
+    out.push_back('"');
+}
+
+inline std::string format_float(double value) {
+    if (!std::isfinite(value)) {
+        return "null";
+    }
+    std::ostringstream out;
+    out.precision(std::numeric_limits<double>::max_digits10);
+    out << value;
+    return out.str();
+}
+
+inline void append_stringified(std::string& out, const doof::JsonValue& value) {
+    std::visit([&out](const auto& inner) {
+        using T = std::decay_t<decltype(inner)>;
+        if constexpr (std::is_same_v<T, std::monostate>) {
+            out += "null";
+        } else if constexpr (std::is_same_v<T, bool>) {
+            out += inner ? "true" : "false";
+        } else if constexpr (std::is_same_v<T, int32_t>
+            || std::is_same_v<T, int64_t>) {
+            out += std::to_string(inner);
+        } else if constexpr (std::is_same_v<T, float>
+            || std::is_same_v<T, double>) {
+            out += format_float(static_cast<double>(inner));
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            append_escaped_string(out, inner);
+        } else if constexpr (std::is_same_v<T, doof::JsonArray>) {
+            out.push_back('[');
+            if (inner != nullptr) {
+                for (size_t index = 0; index < inner->size(); ++index) {
+                    if (index > 0) out.push_back(',');
+                    append_stringified(out, (*inner)[index]);
+                }
+            }
+            out.push_back(']');
+        } else {
+            out.push_back('{');
+            if (inner != nullptr) {
+                bool first = true;
+                for (const auto& [key, item] : *inner) {
+                    if (!first) out.push_back(',');
+                    first = false;
+                    append_escaped_string(out, key);
+                    out.push_back(':');
+                    append_stringified(out, item);
+                }
+            }
+            out.push_back('}');
+        }
+    }, doof::json_storage(value));
+}
+
 } // namespace doof_json_detail
 
 namespace doof_json {
 
 inline doof::Result<doof::JsonValue, std::string> parse(const std::string& text) {
     return doof_json_detail::Parser{text}.parse_document();
+}
+
+inline std::string format(const doof::JsonValue& value) {
+    std::string out;
+    doof_json_detail::append_stringified(out, value);
+    return out;
 }
 
 } // namespace doof_json
