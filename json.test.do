@@ -1,7 +1,7 @@
 import { formatJsonValue, parseJsonValue, parseJsonObject } from "./index"
 
 function requireParsed(text: string): JsonValue {
-  let value: JsonValue = null
+  let value: JsonValue = none
   let found = false
 
   case parseJsonValue(text) {
@@ -36,7 +36,7 @@ function requireParseFailure(text: string): string {
   return message
 }
 
-export function testParsePrimitivesAndEscapes(): void {
+export function testParsePrimitivesAndEscapes(): none {
   assert(formatJsonValue(requireParsed("null")) == "null", "expected null to round-trip")
   assert(formatJsonValue(requireParsed("true")) == "true", "expected true to round-trip")
   assert(formatJsonValue(requireParsed("false")) == "false", "expected false to round-trip")
@@ -50,7 +50,7 @@ export function testParsePrimitivesAndEscapes(): void {
   )
 }
 
-export function testParseNumbersAcrossIntegerRanges(): void {
+export function testParseNumbersAcrossIntegerRanges(): none {
   assert(formatJsonValue(requireParsed("42")) == "42", "expected small integers to round-trip")
   assert(
     formatJsonValue(requireParsed("2147483648")) == "2147483648",
@@ -64,7 +64,7 @@ export function testParseNumbersAcrossIntegerRanges(): void {
   assert(formatJsonValue(requireParsed("1e1")) == "10", "expected exponent numbers to parse")
 }
 
-export function testParseArraysAndObjectsRoundTrip(): void {
+export function testParseArraysAndObjectsRoundTrip(): none {
   assert(formatJsonValue(requireParsed("[]")) == "[]", "expected empty arrays to round-trip")
   assert(formatJsonValue(requireParsed("{}")) == "{}", "expected empty objects to round-trip")
   assert(
@@ -79,13 +79,13 @@ export function testParseArraysAndObjectsRoundTrip(): void {
   )
 }
 
-export function testFormatConstructedValues(): void {
+export function testFormatConstructedValues(): none {
   payload: JsonValue := [
     "line\nbreak",
     { only: "value" },
     2147483648L,
     false,
-    null,
+    none,
   ]
 
   assert(
@@ -94,7 +94,7 @@ export function testFormatConstructedValues(): void {
   )
 }
 
-export function testParseRejectsInvalidNumbers(): void {
+export function testParseRejectsInvalidNumbers(): none {
   leadingZero := requireParseFailure("01")
   assert(
     leadingZero.contains("Leading zeros are not allowed in JSON numbers"),
@@ -108,14 +108,14 @@ export function testParseRejectsInvalidNumbers(): void {
   assert(outOfRange.contains("JSON number out of range"), "expected range diagnostics")
 }
 
-export function testParseReportsLineAndColumn(): void {
+export function testParseReportsLineAndColumn(): none {
   assert(
     requireParseFailure("{\n  \"a\" 1\n}") == "Expected ':' after object key at line 2, column 7",
     "expected object syntax errors to report line and column"
   )
 }
 
-export function testParseRejectsBrokenUnicodeEscapes(): void {
+export function testParseRejectsBrokenUnicodeEscapes(): none {
   incomplete := requireParseFailure("\"\\u12")
   assert(incomplete.contains("Incomplete unicode escape"), "expected incomplete unicode diagnostics")
 
@@ -126,17 +126,17 @@ export function testParseRejectsBrokenUnicodeEscapes(): void {
   assert(unexpectedLow.contains("Unexpected unicode low surrogate"), "expected unexpected low surrogate diagnostics")
 }
 
-export function testParseRejectsTrailingCharacters(): void {
+export function testParseRejectsTrailingCharacters(): none {
   message := requireParseFailure("true false")
   assert(message.contains("Unexpected trailing characters"), "expected trailing character diagnostics")
 }
 
-export function testParseJsonObject() : void {
+export function testParseJsonObject() : none {
   obj := parseJsonObject("{\"key\": \"value\"}")
   assert(obj.isSuccess(), "expected valid JSON object to parse successfully")
 }
 
-export function testFailParseJsonObject() : void {
+export function testFailParseJsonObject() : none {
   obj := parseJsonObject("5")
   case obj {
     s: Success -> assert(false, "expected non-object JSON to fail parsing as object")
