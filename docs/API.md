@@ -1,7 +1,7 @@
 # std/json Guide
 
-`std/json` parses JSON text into Doof `JsonValue` values and formats
-`JsonValue` back to compact JSON. It is the lowest-level JSON helper; higher
+`std/json` parses JSON text into Doof `SerialValue` values and formats
+`SerialValue` back to compact JSON. It is the lowest-level JSON helper; higher
 level typed serialization is handled by the Doof runtime metadata system.
 
 ## Quick Start
@@ -34,7 +34,7 @@ when parsing succeeds but the top-level value is not an object.
 
 `formatJsonValue(value)` emits compact JSON with no extra whitespace. Array order
 is preserved. Object member order follows the insertion order of the underlying
-`JsonObject`.
+`SerialObject`.
 
 Control characters in strings are escaped using JSON escapes.
 
@@ -43,7 +43,7 @@ Control characters in strings are escaped using JSON escapes.
 ### `parseJsonValue`
 
 ```doof
-export import function parseJsonValue(text: string): Result<JsonValue, string>
+export import function parseJsonValue(text: string): Result<SerialValue, string>
 ```
 
 Parse any JSON value.
@@ -53,7 +53,7 @@ Defined in [index.do](../index.do).
 ### `parseJsonObject`
 
 ```doof
-export function parseJsonObject(text: string): Result<JsonObject, string>
+export function parseJsonObject(text: string): Result<SerialObject, string>
 ```
 
 Parse JSON and require the top-level value to be an object.
@@ -63,9 +63,9 @@ Defined in [index.do](../index.do).
 ### `formatJsonValue`
 
 ```doof
-export import function formatJsonValue(value: JsonValue): string
+export import function formatJsonValue(value: SerialValue): string
 ```
 
-Serialize a `JsonValue` to compact JSON.
+Serialize a `SerialValue` to compact JSON.
 
 Defined in [index.do](../index.do).

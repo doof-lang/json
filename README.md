@@ -1,6 +1,6 @@
 # std/json
 
-JSON parsing and formatting for `JsonValue`. Parsing returns a `Result<JsonValue, string>` with readable error messages that include line and column information.
+JSON parsing and formatting for `SerialValue`. Parsing returns a `Result<SerialValue, string>` with readable error messages that include line and column information.
 
 ## Documentation
 
@@ -19,15 +19,15 @@ text := formatJsonValue([
   false,
 ])
 
-// payload is a JsonValue
+// payload is a SerialValue
 // text == "[\"ok\",{\"only\":1},false]"
 ```
 
 ## Exports
 
-### `parseJsonValue(text: string): Result<JsonValue, string>`
+### `parseJsonValue(text: string): Result<SerialValue, string>`
 
-Parse a JSON document into a `JsonValue`.
+Parse a JSON document into a `SerialValue`.
 
 - Accepts JSON nulls, booleans, numbers, strings, arrays, and objects.
 - Integer tokens within 32-bit range become `int`; larger integral tokens become `long`; fractional or exponent tokens become `double`.
@@ -39,9 +39,9 @@ value := try parseJsonValue("[1,true,{\"only\":2}]")
 
 ---
 
-### `formatJsonValue(value: JsonValue): string`
+### `formatJsonValue(value: SerialValue): string`
 
-Serialize a `JsonValue` to compact JSON.
+Serialize a `SerialValue` to compact JSON.
 
 - Emits no extra whitespace.
 - Escapes JSON control characters in strings.
@@ -49,7 +49,7 @@ Serialize a `JsonValue` to compact JSON.
 - Object member order follows insertion order.
 
 ```doof
-payload: JsonValue := ["line\nbreak", { only: "value" }]
+payload: SerialValue := ["line\nbreak", { only: "value" }]
 text := formatJsonValue(payload)
 // "[\"line\\nbreak\",{\"only\":\"value\"}]"
 ```

@@ -69,7 +69,7 @@ struct Parser {
         return message + " at line " + std::to_string(line) + ", column " + std::to_string(column);
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_document() {
+    doof::Result<doof::SerialValue, std::string> parse_document() {
         skip_whitespace();
         auto value = parse_value();
         if (is_failure(value)) {
@@ -82,7 +82,7 @@ struct Parser {
         return value;
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_value() {
+    doof::Result<doof::SerialValue, std::string> parse_value() {
         if (at_end()) {
             return doof::Failure<std::string>{error("Unexpected end of JSON input")};
         }
@@ -95,7 +95,7 @@ struct Parser {
                 if (is_failure(parsed)) {
                     return doof::Failure<std::string>{failure_error(parsed)};
                 }
-                return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(success_value(parsed)))};
+                return doof::Success<doof::SerialValue>{doof::SerialValue(std::move(success_value(parsed)))};
             }
             case '[': return parse_array();
             case '{': return parse_object();
@@ -107,28 +107,28 @@ struct Parser {
         }
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_null() {
+    doof::Result<doof::SerialValue, std::string> parse_null() {
         if (text.compare(index, 4, "null") != 0) {
             return doof::Failure<std::string>{error("Invalid token")};
         }
         index += 4;
-        return doof::Success<doof::JsonValue>{doof::JsonValue(nullptr)};
+        return doof::Success<doof::SerialValue>{doof::SerialValue(nullptr)};
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_true() {
+    doof::Result<doof::SerialValue, std::string> parse_true() {
         if (text.compare(index, 4, "true") != 0) {
             return doof::Failure<std::string>{error("Invalid token")};
         }
         index += 4;
-        return doof::Success<doof::JsonValue>{doof::JsonValue(true)};
+        return doof::Success<doof::SerialValue>{doof::SerialValue(true)};
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_false() {
+    doof::Result<doof::SerialValue, std::string> parse_false() {
         if (text.compare(index, 5, "false") != 0) {
             return doof::Failure<std::string>{error("Invalid token")};
         }
         index += 5;
-        return doof::Success<doof::JsonValue>{doof::JsonValue(false)};
+        return doof::Success<doof::SerialValue>{doof::SerialValue(false)};
     }
 
     doof::Result<std::string, std::string> parse_string() {
@@ -217,13 +217,13 @@ struct Parser {
         return doof::Success<uint32_t>{codepoint};
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_array() {
+    doof::Result<doof::SerialValue, std::string> parse_array() {
         ++index;
         skip_whitespace();
-        auto result = std::make_shared<std::vector<doof::JsonValue>>();
+        auto result = std::make_shared<std::vector<doof::SerialValue>>();
         if (peek() == ']') {
             ++index;
-            return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
+            return doof::Success<doof::SerialValue>{doof::SerialValue(std::move(result))};
         }
         while (true) {
             auto item = parse_value();
@@ -242,16 +242,16 @@ struct Parser {
             ++index;
             skip_whitespace();
         }
-        return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
+        return doof::Success<doof::SerialValue>{doof::SerialValue(std::move(result))};
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_object() {
+    doof::Result<doof::SerialValue, std::string> parse_object() {
         ++index;
         skip_whitespace();
-        doof::JsonObject result = std::make_shared<doof::JsonObject::element_type>();
+        doof::SerialObject result = std::make_shared<doof::SerialObject::element_type>();
         if (peek() == '}') {
             ++index;
-            return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
+            return doof::Success<doof::SerialValue>{doof::SerialValue(std::move(result))};
         }
         while (true) {
             auto key = parse_string();
@@ -280,10 +280,10 @@ struct Parser {
             ++index;
             skip_whitespace();
         }
-        return doof::Success<doof::JsonValue>{doof::JsonValue(std::move(result))};
+        return doof::Success<doof::SerialValue>{doof::SerialValue(std::move(result))};
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_number() {
+    doof::Result<doof::SerialValue, std::string> parse_number() {
         const size_t start = index;
         if (peek() == '-') {
             ++index;
@@ -339,7 +339,7 @@ struct Parser {
         return parse_integer_number(token);
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_float_number(const std::string& token) {
+    doof::Result<doof::SerialValue, std::string> parse_float_number(const std::string& token) {
         errno = 0;
         char* end = nullptr;
         const double value = std::strtod(token.c_str(), &end);
@@ -349,19 +349,19 @@ struct Parser {
         if (errno == ERANGE || !std::isfinite(value)) {
             return doof::Failure<std::string>{error("JSON number out of range")};
         }
-        return doof::Success<doof::JsonValue>{doof::JsonValue(value)};
+        return doof::Success<doof::SerialValue>{doof::SerialValue(value)};
     }
 
-    doof::Result<doof::JsonValue, std::string> parse_integer_number(const std::string& token) {
+    doof::Result<doof::SerialValue, std::string> parse_integer_number(const std::string& token) {
         if (!token.empty() && token.front() == '-') {
             errno = 0;
             char* end = nullptr;
             const long long value = std::strtoll(token.c_str(), &end, 10);
             if (end != nullptr && *end == 0 && errno != ERANGE) {
                 if (value >= std::numeric_limits<int32_t>::min() && value <= std::numeric_limits<int32_t>::max()) {
-                    return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int32_t>(value))};
+                    return doof::Success<doof::SerialValue>{doof::SerialValue(static_cast<int32_t>(value))};
                 }
-                return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int64_t>(value))};
+                return doof::Success<doof::SerialValue>{doof::SerialValue(static_cast<int64_t>(value))};
             }
         } else {
             errno = 0;
@@ -369,10 +369,10 @@ struct Parser {
             const unsigned long long value = std::strtoull(token.c_str(), &end, 10);
             if (end != nullptr && *end == 0 && errno != ERANGE) {
                 if (value <= static_cast<unsigned long long>(std::numeric_limits<int32_t>::max())) {
-                    return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int32_t>(value))};
+                    return doof::Success<doof::SerialValue>{doof::SerialValue(static_cast<int32_t>(value))};
                 }
                 if (value <= static_cast<unsigned long long>(std::numeric_limits<int64_t>::max())) {
-                    return doof::Success<doof::JsonValue>{doof::JsonValue(static_cast<int64_t>(value))};
+                    return doof::Success<doof::SerialValue>{doof::SerialValue(static_cast<int64_t>(value))};
                 }
             }
         }
@@ -416,7 +416,7 @@ inline std::string format_float(double value) {
     return out.str();
 }
 
-inline void append_stringified(std::string& out, const doof::JsonValue& value) {
+inline void append_stringified(std::string& out, const doof::SerialValue& value) {
     std::visit([&out](const auto& inner) {
         using T = std::decay_t<decltype(inner)>;
         if constexpr (std::is_same_v<T, std::monostate>) {
@@ -431,7 +431,7 @@ inline void append_stringified(std::string& out, const doof::JsonValue& value) {
             out += format_float(static_cast<double>(inner));
         } else if constexpr (std::is_same_v<T, std::string>) {
             append_escaped_string(out, inner);
-        } else if constexpr (std::is_same_v<T, doof::JsonArray>) {
+        } else if constexpr (std::is_same_v<T, doof::SerialArray>) {
             out.push_back('[');
             if (inner != nullptr) {
                 for (size_t index = 0; index < inner->size(); ++index) {
@@ -454,18 +454,18 @@ inline void append_stringified(std::string& out, const doof::JsonValue& value) {
             }
             out.push_back('}');
         }
-    }, doof::json_storage(value));
+    }, doof::serial_storage(value));
 }
 
 } // namespace doof_json_detail
 
 namespace doof_json {
 
-inline doof::Result<doof::JsonValue, std::string> parse(const std::string& text) {
+inline doof::Result<doof::SerialValue, std::string> parse(const std::string& text) {
     return doof_json_detail::Parser{text}.parse_document();
 }
 
-inline std::string format(const doof::JsonValue& value) {
+inline std::string format(const doof::SerialValue& value) {
     std::string out;
     doof_json_detail::append_stringified(out, value);
     return out;

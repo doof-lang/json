@@ -1,7 +1,7 @@
 import { formatJsonValue, parseJsonValue, parseJsonObject } from "./index"
 
-function requireParsed(text: string): JsonValue {
-  let value: JsonValue = none
+function requireParsed(text: string): SerialValue {
+  let value: SerialValue = none
   let found = false
 
   case parseJsonValue(text) {
@@ -80,7 +80,7 @@ export function testParseArraysAndObjectsRoundTrip(): none {
 }
 
 export function testFormatConstructedValues(): none {
-  payload: JsonValue := [
+  payload: SerialValue := [
     "line\nbreak",
     { only: "value" },
     2147483648L,
@@ -90,7 +90,7 @@ export function testFormatConstructedValues(): none {
 
   assert(
     formatJsonValue(payload) == "[\"line\\nbreak\",{\"only\":\"value\"},2147483648,false,null]",
-    "expected constructed JsonValue payloads to format as compact JSON"
+    "expected constructed SerialValue payloads to format as compact JSON"
   )
 }
 
