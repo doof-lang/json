@@ -431,6 +431,8 @@ inline void append_stringified(std::string& out, const doof::SerialValue& value)
             out += format_float(static_cast<double>(inner));
         } else if constexpr (std::is_same_v<T, std::string>) {
             append_escaped_string(out, inner);
+        } else if constexpr (std::is_same_v<T, doof::SerialBytes>) {
+            append_escaped_string(out, doof::serial_bytes_to_base64(inner));
         } else if constexpr (std::is_same_v<T, doof::SerialArray>) {
             out.push_back('[');
             if (inner != nullptr) {

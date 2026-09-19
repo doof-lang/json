@@ -37,6 +37,9 @@ is preserved. Object member order follows the insertion order of the underlying
 `SerialObject`.
 
 Control characters in strings are escaped using JSON escapes.
+Readonly byte arrays are emitted by `std/json` as padded standard base64 strings. JSON strings
+parse back as ordinary `string` values; callers that need bytes should decode
+them explicitly.
 
 ## API
 

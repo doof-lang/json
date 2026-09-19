@@ -47,6 +47,7 @@ Serialize a `SerialValue` to compact JSON.
 - Escapes JSON control characters in strings.
 - Array element order is preserved.
 - Object member order follows insertion order.
+- `readonly byte[]` values are emitted as padded standard base64 JSON strings.
 
 ```doof
 payload: SerialValue := ["line\nbreak", { only: "value" }]

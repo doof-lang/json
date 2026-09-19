@@ -94,6 +94,21 @@ export function testFormatConstructedValues(): none {
   )
 }
 
+export function testFormatReadonlyBytesAsBase64String(): none {
+  bytes: readonly byte[] := [0, 1, 2, 251, 239, 255]
+  value := serialValueBytes(bytes)
+  assert(formatJsonValue(value) == "\"AAEC++//\"", "expected readonly bytes to format as base64 JSON string")
+
+  one: readonly byte[] := [0]
+  assert(formatJsonValue(serialValueBytes(one)) == "\"AA==\"", "expected one byte to use padded base64")
+  two: readonly byte[] := [0, 1]
+  assert(formatJsonValue(serialValueBytes(two)) == "\"AAE=\"", "expected two bytes to use padded base64")
+  empty: readonly byte[] := []
+  assert(formatJsonValue(serialValueBytes(empty)) == "\"\"", "expected empty bytes to format as an empty base64 string")
+}
+
+function serialValueBytes(bytes: readonly byte[]): SerialValue => bytes
+
 export function testParseRejectsInvalidNumbers(): none {
   leadingZero := requireParseFailure("01")
   assert(
