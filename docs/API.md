@@ -9,8 +9,8 @@ level typed serialization is handled by the Doof runtime metadata system.
 ```doof
 import { formatJsonValue, parseJsonObject, parseJsonValue } from "std/json"
 
-value := try! parseJsonValue("[1,true,{\"name\":\"Ada\"}]")
-object := try! parseJsonObject("{\"ok\":true}")
+value := parseJsonValue("[1,true,{\"name\":\"Ada\"}]")!
+object := parseJsonObject("{\"ok\":true}")!
 text := formatJsonValue({ ok: true, count: 3 })
 ```
 
