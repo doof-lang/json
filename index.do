@@ -6,8 +6,8 @@ export import isolated function formatJsonValue(value: SerialValue): string
 
 export function parseJsonObject(text: string): Result<SerialObject, string> {
   try result := parseJsonValue(text)
-  case result {
-    o: SerialObject -> return Success(o)
-    _ -> return Failure("Parsed value is not a JSON object")
+  object := result as SerialObject else {
+    return Failure("Parsed value is not a JSON object")
   }
+  return Success(object)
 }
